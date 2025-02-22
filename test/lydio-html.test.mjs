@@ -1,4 +1,4 @@
-import { Tag, Void, Block } from '../src/lydio-html.mjs';
+import { Tag, Void, Block } from '../src/index.mjs';
 
 console.log("Running Lydio: HTML Tests...\n");
 

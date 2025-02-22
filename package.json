@@ -1,8 +1,8 @@
 {
   "name": "@lydio/html",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A structured HTML generator for JavaScript, designed to provide a fluent and efficient way to create HTML elements programmatically with a clean and expressive API.",
-  "main": "./src/lydio-html.mjs",
+  "main": "./src/index.mjs",
   "type": "module",
   "scripts": {
     "test": "node test/lydio-html.test.mjs"
