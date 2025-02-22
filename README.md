@@ -108,3 +108,9 @@ console.log(container.toHtml());
 */
 
 ```
+
+## License
+MIT
+
+## Branding & Authenticity
+**Lydio is a project by Alex Stevovich.** The Lydio name, branding, and identity belong to its creator.

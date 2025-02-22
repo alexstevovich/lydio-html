@@ -65,4 +65,6 @@ logs/
 *.tmp
 
 # My Tools
-push-to-remotes.bat
+git-init.bat
+git-commit.bat
+git-push.bat

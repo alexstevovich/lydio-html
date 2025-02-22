@@ -26,20 +26,22 @@ export class Element {
         return this.addClass(className);       
     }
 
-    get id() {
-        return this._id;
+    setId(value) {
+        this._id = value
+        return this;
     }
 
-    set id(value) {
-        this._id = value;
+    id(value) {
+        return this.setId(value);
     }
 
-    get elid() {
-        return this._elementId;
+    setElid(value) {
+        this._elid = value
+        return this;
     }
 
-    set elid(value) {
-        this._elementId = value;
+    elid(value) {
+        return this.setElid(value);
     }
 
     findElementByElementId(elementId) {
