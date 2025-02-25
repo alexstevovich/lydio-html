@@ -17,31 +17,18 @@ export class Element {
         this._styles = [];
     }
 
-    addClass(className) {
+    cls(className) {
         this._classes.add(className);
         return this;       
     }
 
-    cls(className) {
-        return this.addClass(className);       
-    }
-
-    setId(value) {
+    id(value) {
         this._id = value
         return this;
     }
-
-    id(value) {
-        return this.setId(value);
-    }
-
-    setElid(value) {
+    elid(value) {
         this._elid = value
         return this;
-    }
-
-    elid(value) {
-        return this.setElid(value);
     }
 
     findElementByElementId(elementId) {
@@ -53,38 +40,18 @@ export class Element {
         return null;
     }
 
-    addAttribute(key, value = null) {
+    attr(key, value = null) {
         this._attributes[key] = value;
         return this;
     }
 
-    attr(key, value) {
-        return this.addAttribute(key, value);
-    }
-
-    addStyle(prop, value) {
+    style(prop, value) {
         this._styles.push(`${prop}: ${value}`);
         return this;
     }
 
-    style(prop, value) {
-        return  this.addStyle(prop, value);
-    }
-
-    getParent() {
-        return this._parentElement;
-    }
-
     parent() {
-        return this.getParent();
-    }
-
-    getRoot() {
-        let root = this;
-        while (root._parentElement) {
-            root = root._parentElement;
-        }
-        return root;
+        return this._parentElement;
     }
 
     root() {
@@ -118,67 +85,42 @@ class Slotable extends Element {
         this._slot = [];
     }
 
-    addAndGetTag(tagName) {
+    tag(tagName) {
         const child = new Tag(tagName);
         child._parentElement = this;
         this._slot.push(child);
         return child;
     }
 
-    tag(tagName) {
-        return this.addAndGetTag(tagName)
-    }
-
-    addAndGetVoid(tagName) {
+    void(tagName) {
         const child = new Void(tagName);
         child._parentElement = this;
         this._slot.push(child);
         return child;
     }
 
-    void(tagName) {
-        return this.addAndGetVoid(tagName);
-    }
-
-    addAndGetBlock() {
+    block() {
         const child = new Block();
         child._parentElement = this;
         this._slot.push(child);
         return child;
     }
 
-    block() {
-        return this.addAndGetBlock();
-    }
-
-    addText(content) {
+    text(content) {
         this._slot.push(new Text(content));
         return this;
     }
 
-    text(content) {
-        return this.addText(content);
-    }
-
-    addElement(element) {
+    add(element) {
         element._parentElement = this;
         this._slot.push(element);
         return this;
     }
 
-    add(element) {
-        return this.addElement(element);
-    }
-
-    addAndGetElement(element) {
+    append(element) {
         this.addElement(element)
         return element;
     }
-
-    addAndGet(element) {
-        return this.addAndGetElement(element)
-    }
-
 }
 
 export class Tag extends Slotable {

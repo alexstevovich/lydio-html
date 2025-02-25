@@ -1,4 +1,3 @@
-
 # @lydio/html
 
 @lydio/html is a structured HTML generator for JavaScript, designed to provide a fluent and efficient way to create HTML elements programmatically. It enables a clean and expressive API.
@@ -8,14 +7,13 @@
 -   Fluent API for defining HTML elements.
 -   Supports nesting and dynamic content.
 -   Clear distinction between elements (`Tag`), self-closing elements (`Void`), and blocks (`Block`).
--   intuitive short-hand methods for efficiency: `.tag()`, `.void()`, `.block()`, `.cls()`, `.attr()`, `.style()`, `.text()`, `.parent()`, `.root()`.
--   Explicit methods (`addX()`, `addAndGetX()`) available for clarity when needed.
+-   Intuitive short-hand methods for efficiency: `.tag()`, `.void()`, `.block()`, `.cls()`, `.attr()`, `.style()`, `.text()`, `.parent()`, `.root()`.
+-   Methods return appropriate values for fluent chaining (`this`) or element retrieval (`append`).
 
 ## Installation
 
 ```sh
 npm install @lydio/html
-
 ```
 
 ## Usage
@@ -38,42 +36,40 @@ console.log(div.toHtml());
 ```js
 import { Tag } from '@lydio/html';
 
-class AwesomeHeader extends Tag{
-    constructor(text)
-    {
-	    super('div')
-		this.cls('awesome-header').text(text);
-	}
+class AwesomeHeader extends Tag {
+    constructor(text) {
+        super('div');
+        this.cls('awesome-header').text(text);
+    }
 }
 
-const body = new Tag('body')
-body.add(new AwesomeHeader("Lydio HTML rocks!"))
+const body = new Tag('body');
+body.append(new AwesomeHeader("Lydio HTML rocks!"));
 
 console.log(body.toHtml());
-
 ```
 
 ## API
 
 ### Creating Elements
 
--   `.tag(tagName)`: Creates and returns a new tag (`addAndGetTag(tagName)`).
--   `.void(tagName)`: Creates and returns a self-closing tag (`addAndGetVoid(tagName)`).
--   `.block()`: Creates and returns a block without a root wrapper (`addAndGetBlock()`).
+-   `.tag(tagName)`: Creates and returns a new tag.
+-   `.void(tagName)`: Creates and returns a self-closing tag.
+-   `.block()`: Creates and returns a block without a root wrapper.
 
 ### Adding and Retrieving Elements
 
--   `.add(element)`: Adds an element and returns `this` (`addElement(element)`).
--   `.addAndGet(element)`: Adds an element and returns the added element (`addAndGetElement(element)`).
+-   `.add(element)`: Adds an element and returns `this` for chaining.
+-   `.append(element)`: Adds an element and returns the appended element.
 
 ### Attributes and Styling
 
 -   `.id(value)`: Sets the id.
 -   `.cls(className)`: Adds a class.
 -   `.attr(key, value)`: Adds an attribute.
--   `.style(prop, value)`: Adds inline CSS styles
-- 
-While id, class, and style are all technically attributes and can be added that way it's preferred to treat these as first class systems and add and set them with these dedicated functions. This allows a much easier OOP approach when interacting with the core objects and opens up potential for post processing tools to handle and improve the output with  new features.
+-   `.style(prop, value)`: Adds inline CSS styles.
+
+While `id`, `class`, and `style` are all technically attributes and can be added that way, it's preferred to treat these as first-class systems and set them with dedicated functions. This allows a much easier OOP approach when interacting with the core objects and opens up potential for post-processing tools to improve the output with new features.
 
 ### Text Content
 
@@ -106,7 +102,6 @@ console.log(container.toHtml());
     <p>Generate HTML easily.</p>
 </div>
 */
-
 ```
 
 ## License
@@ -114,3 +109,4 @@ MIT
 
 ## Branding & Authenticity
 **Lydio is a project by Alex Stevovich.** The Lydio name, branding, and identity belong to its creator.
+

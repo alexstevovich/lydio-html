@@ -17,10 +17,10 @@ console.log('<div class="container" data-type="main" style="color: red;">Hello, 
 // Test 2: Nested Elements
 const container = new Tag('div')
     .cls('main-container')
-    .addAndGetTag('h1')
+    .tag('h1')
         .text('Welcome to Lydio')
     .parent()
-    .addAndGetTag('p')
+    .tag('p')
         .text('Generate HTML easily.');
 
 console.log("Test 2 - Nested Elements:");
@@ -43,8 +43,8 @@ console.log('<img src="logo.png" alt="Lydio Logo"> (or self-closing if XML compl
 
 // Test 4: Block with Multiple Root Elements
 const block = new Block()
-    .addAndGetTag('h2').text('Block Title').parent()
-    .addAndGetTag('p').text('Block content goes here.');
+    .tag('h2').text('Block Title').parent()
+    .tag('p').text('Block content goes here.');
 
 console.log("Test 4 - Block with Multiple Root Elements:");
 console.log(block.toHtml());
@@ -55,9 +55,9 @@ console.log(`<h2>Block Title</h2>
 // Test 5: Parent Navigation
 const nested = new Tag('div')
     .cls('outer')
-    .addAndGetTag('section')
+    .tag('section')
         .cls('inner')
-        .addAndGetTag('p')
+        .tag('p')
             .text('Inside paragraph')
         .parent()
     .parent();
