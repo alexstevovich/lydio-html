@@ -118,7 +118,7 @@ class Slotable extends Element {
     }
 
     append(element) {
-        this.addElement(element)
+        this.add(element)
         return element;
     }
 }
