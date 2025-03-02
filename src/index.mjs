@@ -1,43 +1,187 @@
-const Config = { xmlCompliant: false };
+const Global = { xmlCompliantDefault: false };
 
-export class Element {
-    _classes;
-    _id;
-    _attributes;
+const SELF_CLOSING_TAGS = new Set([
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 
+    'link', 'meta', 'param', 'source', 'track', 'wbr'
+]);
+
+
+function _sanitizeText(input) {
+    // Offline basic sanitization: Strip <script>, <iframe>, and similar tags
+    return input.replace(/<\/?(script|iframe|object|embed|link|meta|style|form|input|textarea|button)[^>]*>/gi, "");
+}
+
+function escapeHtml(str) {
+    if (typeof str !== "string") {
+        str = String(str); // Convert to string explicitly
+    }
+    return str.replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;");
+}
+
+class Issue
+{
+    constructor(element,message)
+    {
+        this.id = element.nodeId;
+        this.type = element.nodeType;
+        this.message = message;
+    }
+
+    toString() {
+        return `[Issue] ${this.type}${this.id ? `#${this.id}` : ''} → ${this.message}`;
+    }
+    
+}
+
+class AuditContext {
+    constructor() {
+        this.issues = [];
+    }
+
+    issue(obj) {
+        this.issues.push(obj);
+    }
+
+    hasIssues() {
+        return this.issues.length > 0;
+    }
+
+    length() {
+        return this.issues.length;
+    }
+}
+
+
+
+class Node {
     _parentElement;
-    _elementId;
-    _styles;
+    _nodeId;
+    /**
+     * Defines the type of this node.
+     * 
+     * - This should only be overridden in subclasses.
+     * - Do **not** attempt to set this dynamically at runtime.
+     * 
+     * Example usage in a subclass:
+     * ```js
+     * class CustomNode extends Node {
+     *   static get nodeType() { return 'custom-node'; }
+     * }
+     * ```
+     */
+    static get nodeType() { return 'node'; }
 
     constructor() {
-        this._classes = new Set();
-        this._id = null;
-        this._attributes = {};
         this._parentElement = null;
-        this._elementId = null;
+        this._nodeId = null;
+    }
+    
+    get nodeType() {
+        return this.constructor.nodeType
+    }
+
+    get nodeId() {
+        return this._nodeId;
+    }
+
+    nid(value) {
+        this._nodeId = value;
+        return this;
+    }
+
+    parent() {
+        return this._parentElement;
+    }
+
+    root() {
+        return this.getRoot();
+    }
+
+    error(message) {
+        throw new Error(`[Lydio Error]: `+message);
+    }
+
+}
+
+const ContainerMixin = Base => class extends Base {
+    constructor() {
+        super();
+        this._children = [];
+    }
+
+    append(element) {
+        element._parentElement = this;
+        this._children.push(element);
+        return element;
+    }
+
+    leaf(tagName) {
+        const child = new Leaf({ tagName });
+        return this.append(child);
+    }
+
+    tag(tagName) {
+        const child = new Tag({ tagName });
+        return this.append(child);
+    }
+
+    fragment() {
+        const child = new Fragment();
+        return this.append(child);
+    }
+
+    raw(content) {
+        this.append(new Raw(content));
+        return this;
+    }
+
+    text(content) {
+        this.append(new Text(content));
+        return this;
+    }
+
+    doctype(type = "html") {
+        const child = new Doctype(type);
+        return this.append(child);
+    }
+
+    _audit(context) {
+        super._audit?.(context);
+        for (const child of this._children) {
+            if (typeof child._audit === 'function') {  // ✅ Ensures `_audit()` exists
+                child._audit(context);
+            }
+        }
+    }
+};
+
+
+const AttributableMixin = Base => class extends Base {
+    constructor() {
+        super();
+        this._classes = new Set();
+        this._attributes = {};
         this._styles = [];
+        this._id = null;
     }
 
     cls(className) {
         this._classes.add(className);
-        return this;       
+        return this;
+    }
+
+    precls(prefix,className) {
+        this.cls(className);
+        if (prefix) this.cls(prefix + className);
+        return this;
     }
 
     id(value) {
-        this._id = value
+        this._id = value;
         return this;
-    }
-    elid(value) {
-        this._elid = value
-        return this;
-    }
-
-    findElementByElementId(elementId) {
-        if (this._elementId === elementId) return this;
-        for (const child of this._slot || []) {
-            const found = child.findElementByElementId?.(elementId);
-            if (found) return found;
-        }
-        return null;
     }
 
     attr(key, value = null) {
@@ -50,128 +194,246 @@ export class Element {
         return this;
     }
 
-    parent() {
-        return this._parentElement;
-    }
-
-    root() {
-        return this.getRoot();
-    }
-
     _renderAttributes() {
         let attrs = [];
-        if (this._classes.size) attrs.push(`class="${Array.from(this._classes).join(" ")}"`);
-
-        if (this._id) attrs.push(`id="${this._id}"`);
-
-        // Handle styles before rendering attributes
-        if (this._styles.length > 0 && !this._attributes["style"]) {
+    
+        if (this._classes.size) {
+            attrs.push(`class="${Array.from(this._classes).join(" ")}"`);
+        }
+        if (this._id) {
+            attrs.push(`id="${this._id}"`);
+        }
+        if (this._styles.length) {
             this._attributes["style"] = this._styles.join("; ");
         }
-
-        Object.entries(this._attributes).forEach(([key, value]) => {
-            attrs.push(value !== null ? `${key}="${value}"` : key);
-        });
-
+    
+        for (const [key, value] of Object.entries(this._attributes)) {
+            if (value === null) {
+                attrs.push(key);
+            } else {
+                attrs.push(`${key}="${escapeHtml(value)}"`);
+            }
+        }
+    
         return attrs.length ? " " + attrs.join(" ") : "";
     }
-}
+    
+};
 
-class Slotable extends Element {
-    _slot;
 
+const AuditableMixin = Base => class extends Base {
+    audit() {
+        const context = new AuditContext();
+        this._audit(context);
+        return context;
+    }
+
+    validate() {
+        return !this.audit().hasIssues();
+    }
+
+    debugValidate() {
+        const context = this.audit();
+        if (context.hasIssues()) {
+            console.warn(`[Lydio:Audit] Found ${context.length()} issue`)
+            context.issues.forEach((issue)=>
+                {                    
+                    console.warn(`[Lydio:Audit]: ${issue.toString()}`);
+                })
+        }
+        else
+        {
+            //Makes to much spam for large projects:
+            //console.info(`[Lydio:Audit] Success!`);
+        }
+        return !context.hasIssues();
+    }
+};
+
+const ElementMixin = Base => class extends Base {
     constructor() {
         super();
-        this._slot = [];
+        this._tagName = null;
     }
 
-    tag(tagName) {
-        const child = new Tag(tagName);
-        child._parentElement = this;
-        this._slot.push(child);
-        return child;
-    }
-
-    void(tagName) {
-        const child = new Void(tagName);
-        child._parentElement = this;
-        this._slot.push(child);
-        return child;
-    }
-
-    block() {
-        const child = new Block();
-        child._parentElement = this;
-        this._slot.push(child);
-        return child;
-    }
-
-    text(content) {
-        this._slot.push(new Text(content));
-        return this;
-    }
-
-    add(element) {
-        element._parentElement = this;
-        this._slot.push(element);
-        return this;
-    }
-
-    append(element) {
-        this.add(element)
-        return element;
-    }
-}
-
-export class Tag extends Slotable {
-    _tagName;
-
-    constructor(tagName) {
-        super();
+    setTagName(tagName) {
+        if (typeof tagName !== "string" || !tagName.trim()) {
+            throw new Error("[Lydio:Taggable] Invalid tag name.");
+        }
         this._tagName = tagName;
+        return this;
     }
 
-    toHtml(options = {}) {
+    getTagName() {
+        return this._tagName;
+    }
+
+    isTagNameValid(){
+        if (typeof this._tagName !== "string" || this._tagName.trim() === "") {
+            return false;
+        }
+        return true;
+    }
+    
+    auditTagName(context)
+    {
+        if(!this.isTagNameValid())
+        {
+            context.issue(new Issue(this,'Tag name is required but was not set.'));
+        }
+    }
+
+    ensureTagName() {
+        if(!this.isTagNameValid())
+        {
+            throw new Error(`[Lydio:Taggable] Tag name is required but was not set.`);
+        }
+    }
+};
+
+
+class Tag extends AuditableMixin(AttributableMixin(ContainerMixin(ElementMixin(Node)))) {
+
+    static get nodeType() { return 'tag'; }
+
+    constructor({ tagName = null } = {}) {
+        super();
+        if (tagName) {
+            this.setTagName(tagName);
+        }
+    }
+
+    _audit(context) {
+        super._audit?.(context);
+
+        this.auditTagName(context)
+        if (SELF_CLOSING_TAGS.has(this._tagName)) {
+            context.issue(new Issue(this,`${this._tagName} should not be a self-closing tag. Use 'void()' instead.`));
+        }
+    }
+
+    toHtml() {
+        this.ensureTagName()
         const attrs = this._renderAttributes();
-        const content = this._slot.map(el => el.toHtml(options)).join("");
+        const content = this._children.reduce((html, el) => html + el.toHtml(), "");
         return `<${this._tagName}${attrs}>${content}</${this._tagName}>`;
     }
 }
 
-export class Void extends Element {
-    _tagName;
 
-    constructor(tagName) {
+class Fragment extends AuditableMixin(ContainerMixin(Node)) {
+
+    static get nodeType() { return 'fragment'; }
+
+    constructor() {
         super();
-        this._tagName = tagName;
     }
 
-    toHtml(options = {}) {
+    toHtml() {
+        return this._children.reduce((html, el) => html + el.toHtml(), "");
+    }
+}
+
+
+class Leaf extends AuditableMixin(AttributableMixin(ElementMixin(Node))) {
+
+    static get nodeType() { return 'leaf'; }
+
+    constructor({ tagName = null } = {}) {
+        super();
+        if (tagName) {
+            this.setTagName(tagName);
+        }
+    }
+
+    _audit(context) {
+        super._audit?.(context);
+        this.auditTagName(context)
+        if (!SELF_CLOSING_TAGS.has(this._tagName)) {
+           context.issue(new Issue(this,`${this._tagName} is not a valid self-closing tag.`));
+        }
+    }
+
+    toHtml({xmlCompliant = Global.xmlCompliantDefault}={}) {
+        this.ensureTagName()
         const attrs = this._renderAttributes();
-        return Config.xmlCompliant
+        return xmlCompliant
             ? `<${this._tagName}${attrs}/>`
             : `<${this._tagName}${attrs}>`;
     }
 }
 
-export class Text {
+
+class Text extends Node {
     _content;
 
+    static get nodeType() { return 'text'; }
+
     constructor(content) {
+        super();
+        this.set(content)
+    }
+
+    set(content) {
+        this._content = _sanitizeText(content);
+        return this;
+    }
+
+    toHtml() {
+        return escapeHtml(this._content);
+    }
+}
+
+class Raw extends Node {
+    _content;
+
+    static get nodeType() { return 'raw'; }
+
+    constructor(content) {
+        super();
+        this._content = content;
+        return this
+    }
+
+    set(content) {
         this._content = content;
     }
 
-    toHtml(options = {}) {
+
+    toHtml() {
         return this._content;
     }
 }
 
-export class Block extends Slotable {
-    constructor() {
+
+const VALID_DOCTYPES = new Set(["html", "xhtml", "transitional", "strict", "frameset"]);
+
+class Doctype extends AuditableMixin(Node) {
+    _type;
+    _force;
+
+    static get nodeType() { return 'doctype'; }
+
+    constructor(type = "html", { force = false } = {}) {
         super();
+        this._type = type;
+        this._force = force;
     }
 
-    toHtml(options = {}) {
-        return this._slot.map(el => el.toHtml(options)).join("");
+    _audit(context) {
+        super._audit?.(context);
+
+        if (!this._force && !VALID_DOCTYPES.has(this._type)) {
+            context.issue(new Issue(this,`Invalid DOCTYPE: ${this._type}. Use a valid one or set force: true.`));
+        }
+    }
+
+    toHtml() {
+        return `<!DOCTYPE ${this._type}>`;
     }
 }
+
+
+
+export { Global,Tag, Leaf, Fragment };
+export default  {Global, Tag, Leaf, Fragment };
